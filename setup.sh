@@ -56,7 +56,7 @@ sudo apt install -y dotnet-sdk-7.0
 # 5️⃣ CLONE CODE TỪ GITHUB
 # ===============================
 echo "🔹 Tải lại dự án từ GitHub..."
-cd /home/ubuntu
+cd $HOME
 
 if [ ! -d "LicenseCheckerAPI" ]; then
   git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git || (echo "❌ Lỗi khi clone GitHub" && exit 1)
@@ -65,7 +65,7 @@ else
   git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
 fi
 
-cd /home/ubuntu/LicenseCheckerAPI
+cd $HOME/LicenseCheckerAPI
 
 # ===============================
 # 6️⃣ CÀI ĐẶT .NET & ENTITY FRAMEWORK CORE
