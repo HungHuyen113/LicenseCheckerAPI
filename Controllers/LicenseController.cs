@@ -25,57 +25,27 @@ public class LicenseController : ControllerBase
 
         return Ok("License hợp lệ!");
     }
-    // 🔹 API XÓA LICENSE (Dùng `POST` Thay Vì `DELETE`)
-    [HttpPost("delete")]
-    public async Task<IActionResult> DeleteLicense([FromBody] LicenseRequest request)
+// API để đăng ký license mới
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterLicense([FromBody] License newLicense)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.LicenseKey) || string.IsNullOrWhiteSpace(request.MachineId))
+        if (string.IsNullOrWhiteSpace(newLicense.LicenseKey) || string.IsNullOrWhiteSpace(newLicense.MachineId))
         {
-            return BadRequest(new { message = "Invalid request format." });
+            return BadRequest("LicenseKey và MachineId không được để trống.");
         }
 
-        var license = await _context.Licenses.FirstOrDefaultAsync(l =>
-            l.LicenseKey == request.LicenseKey && l.MachineId == request.MachineId);
+        var existingLicense = await _context.Licenses.FirstOrDefaultAsync(l =>
+            l.LicenseKey == newLicense.LicenseKey && l.MachineId == newLicense.MachineId);
 
-        if (license == null)
+        if (existingLicense != null)
         {
-            return NotFound(new { message = "License not found." });
+            return Conflict("License đã tồn tại.");
         }
 
-        _context.Licenses.Remove(license);
+        newLicense.IsActive = true; // Mặc định license mới là hợp lệ
+        _context.Licenses.Add(newLicense);
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "License deleted successfully!" });
+        return Ok("License đã được đăng ký thành công!");
     }
-    //API để xoá license
-    [HttpDelete("delete")]
-public IActionResult DeleteLicense([FromBody] LicenseRequest request)
-{
-    if (request == null || string.IsNullOrEmpty(request.LicenseKey) || string.IsNullOrEmpty(request.MachineId))
-    {
-        return BadRequest(new { message = "Invalid request format." });
-    }
-
-    // Kiểm tra license trong database
-    var license = _context.Licenses.FirstOrDefault(l => l.LicenseKey == request.LicenseKey && l.MachineId == request.MachineId);
-
-    if (license == null)
-    {
-        return NotFound(new { message = "License not found." });
-    }
-
-    // Xóa license
-    _context.Licenses.Remove(license);
-    _context.SaveChanges();
-
-    return Ok(new { message = "License deleted successfully!" });
 }
-[HttpGet("list")]
-public IActionResult GetLicenses()
-{
-    var licenses = _context.Licenses.ToList();
-    return Ok(licenses);
-}
-
-}
-
