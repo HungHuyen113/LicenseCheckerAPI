@@ -48,4 +48,29 @@ public class LicenseController : ControllerBase
 
         return Ok("License đã được đăng ký thành công!");
     }
+    //API để xoá license
+    [HttpDelete("delete")]
+public IActionResult DeleteLicense([FromBody] LicenseRequest request)
+{
+    if (request == null || string.IsNullOrEmpty(request.LicenseKey) || string.IsNullOrEmpty(request.MachineId))
+    {
+        return BadRequest(new { message = "Invalid request format." });
+    }
+
+    // Kiểm tra license trong database
+    var license = _context.Licenses.FirstOrDefault(l => l.LicenseKey == request.LicenseKey && l.MachineId == request.MachineId);
+
+    if (license == null)
+    {
+        return NotFound(new { message = "License not found." });
+    }
+
+    // Xóa license
+    _context.Licenses.Remove(license);
+    _context.SaveChanges();
+
+    return Ok(new { message = "License deleted successfully!" });
 }
+
+}
+
