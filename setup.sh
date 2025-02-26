@@ -11,19 +11,17 @@ echo "🔹 Cập nhật hệ thống..."
 sudo apt update && sudo apt upgrade -y
 
 echo "🔹 Cài đặt các gói cơ bản..."
-sudo apt install -y wget curl git ufw nano
+sudo apt install -y wget curl git ufw nano mysql-server dotnet-sdk-7.0
 
 # ===============================
 # 2️⃣ CÀI ĐẶT MYSQL SERVER
 # ===============================
-MYSQL_PASSWORD="Bui1610@hung"  # ⚠️ Cần thay bằng mật khẩu bảo mật hơn!
+MYSQL_PASSWORD="Bui1610@hung"
 
-echo "🔹 Cài đặt MySQL Server..."
-sudo apt install mysql-server -y
+echo "🔹 Cấu hình MySQL..."
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
-echo "🔹 Cấu hình MySQL..."
 sudo mysql -u root -e "
 CREATE DATABASE IF NOT EXISTS license_db;
 CREATE USER IF NOT EXISTS 'apiuser'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
@@ -56,16 +54,16 @@ sudo apt install -y dotnet-sdk-7.0
 # 5️⃣ CLONE CODE TỪ GITHUB
 # ===============================
 echo "🔹 Tải lại dự án từ GitHub..."
-cd $HOME
+cd /root
 
-if [ ! -d "LicenseCheckerAPI" ]; then
+if [ ! -d "/root/LicenseCheckerAPI" ]; then
   git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git || (echo "❌ Lỗi khi clone GitHub" && exit 1)
 else
-  cd LicenseCheckerAPI
+  cd /root/LicenseCheckerAPI
   git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
 fi
 
-cd $HOME/LicenseCheckerAPI
+cd /root/LicenseCheckerAPI
 
 # ===============================
 # 6️⃣ CÀI ĐẶT .NET & ENTITY FRAMEWORK CORE
@@ -73,7 +71,7 @@ cd $HOME/LicenseCheckerAPI
 echo "🔹 Cài đặt các package .NET..."
 dotnet restore
 dotnet tool install --global dotnet-ef --version 7.0.14
-export PATH="$HOME/.dotnet/tools:$PATH"
+export PATH="/root/.dotnet/tools:$PATH"
 
 # ===============================
 # 7️⃣ CHẠY DATABASE MIGRATION
@@ -85,14 +83,14 @@ dotnet ef database update || (echo "❌ Lỗi khi chạy database migration" && 
 # 8️⃣ CHẠY SERVER API TỰ ĐỘNG
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
-sudo bash -c 'cat > /etc/systemd/system/licenseapi.service <<EOF
+sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
 [Unit]
 Description=License API Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/dotnet $HOME/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
-WorkingDirectory=$HOME/LicenseCheckerAPI
+ExecStart=/usr/bin/dotnet /root/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
+WorkingDirectory=/root/LicenseCheckerAPI
 Restart=always
 User=root
 Environment=DOTNET_CLI_HOME=/tmp
@@ -100,12 +98,11 @@ Environment=DOTNET_NOLOGO=1
 
 [Install]
 WantedBy=multi-user.target
-EOF'
-
+EOF
 
 # Kích hoạt service
 sudo systemctl daemon-reload
 sudo systemctl enable licenseapi.service
 sudo systemctl restart licenseapi.service
 
-echo "✅ Server License A
+echo "✅ Server License API đã chạy thành công trên cổng 5000!"
