@@ -25,28 +25,27 @@ public class LicenseController : ControllerBase
 
         return Ok("License hợp lệ!");
     }
-// API để đăng ký license mới
-    [HttpPost("register")]
-    public async Task<IActionResult> RegisterLicense([FromBody] License newLicense)
+    // 🔹 API XÓA LICENSE (Dùng `POST` Thay Vì `DELETE`)
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteLicense([FromBody] LicenseRequest request)
     {
-        if (string.IsNullOrWhiteSpace(newLicense.LicenseKey) || string.IsNullOrWhiteSpace(newLicense.MachineId))
+        if (request == null || string.IsNullOrWhiteSpace(request.LicenseKey) || string.IsNullOrWhiteSpace(request.MachineId))
         {
-            return BadRequest("LicenseKey và MachineId không được để trống.");
+            return BadRequest(new { message = "Invalid request format." });
         }
 
-        var existingLicense = await _context.Licenses.FirstOrDefaultAsync(l =>
-            l.LicenseKey == newLicense.LicenseKey && l.MachineId == newLicense.MachineId);
+        var license = await _context.Licenses.FirstOrDefaultAsync(l =>
+            l.LicenseKey == request.LicenseKey && l.MachineId == request.MachineId);
 
-        if (existingLicense != null)
+        if (license == null)
         {
-            return Conflict("License đã tồn tại.");
+            return NotFound(new { message = "License not found." });
         }
 
-        newLicense.IsActive = true; // Mặc định license mới là hợp lệ
-        _context.Licenses.Add(newLicense);
+        _context.Licenses.Remove(license);
         await _context.SaveChangesAsync();
 
-        return Ok("License đã được đăng ký thành công!");
+        return Ok(new { message = "License deleted successfully!" });
     }
     //API để xoá license
     [HttpDelete("delete")]
