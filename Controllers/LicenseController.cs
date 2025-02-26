@@ -71,6 +71,12 @@ public IActionResult DeleteLicense([FromBody] LicenseRequest request)
 
     return Ok(new { message = "License deleted successfully!" });
 }
+[HttpGet("list")]
+public IActionResult GetLicenses()
+{
+    var licenses = _context.Licenses.ToList();
+    return Ok(licenses);
+}
 
 }
 
