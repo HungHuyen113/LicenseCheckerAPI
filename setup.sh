@@ -42,8 +42,9 @@ echo "🔹 Mở cổng cần thiết..."
 sudo ufw allow 22/tcp || echo "Cổng SSH (22) đã mở"
 sudo ufw allow 3306/tcp || echo "Cổng MySQL (3306) đã mở"
 sudo ufw allow 5000/tcp || echo "Cổng API (5000) đã mở"
+echo "y" | sudo ufw enable  # ✅ Thêm "y" để tự động xác nhận
 sudo ufw reload
-sudo ufw enable
+
 
 
 # ===============================
