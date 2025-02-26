@@ -36,10 +36,13 @@ sudo systemctl restart mysql
 # ===============================
 # 3️⃣ MỞ CỔNG TƯỜNG LỬA
 # ===============================
-echo "🔹 Mở cổng MySQL (3306) và API (5000)..."
-sudo ufw allow 3306/tcp || echo "Cổng 3306 đã mở"
-sudo ufw allow 5000/tcp || echo "Cổng 5000 đã mở"
-sudo ufw enable || echo "Tường lửa đã được bật"
+echo "🔹 Mở cổng cần thiết..."
+sudo ufw allow 22/tcp || echo "Cổng SSH (22) đã mở"
+sudo ufw allow 3306/tcp || echo "Cổng MySQL (3306) đã mở"
+sudo ufw allow 5000/tcp || echo "Cổng API (5000) đã mở"
+sudo ufw reload
+sudo ufw enable
+
 
 # ===============================
 # 4️⃣ CÀI ĐẶT .NET 7
