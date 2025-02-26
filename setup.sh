@@ -85,22 +85,23 @@ dotnet ef database update || (echo "❌ Lỗi khi chạy database migration" && 
 # 8️⃣ CHẠY SERVER API TỰ ĐỘNG
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
-sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
+sudo bash -c 'cat > /etc/systemd/system/licenseapi.service <<EOF
 [Unit]
 Description=License API Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/dotnet /home/ubuntu/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
-WorkingDirectory=/home/ubuntu/LicenseCheckerAPI
+ExecStart=/usr/bin/dotnet $HOME/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
+WorkingDirectory=$HOME/LicenseCheckerAPI
 Restart=always
-User=ubuntu
+User=root
 Environment=DOTNET_CLI_HOME=/tmp
 Environment=DOTNET_NOLOGO=1
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF'
+
 
 # Kích hoạt service
 sudo systemctl daemon-reload
