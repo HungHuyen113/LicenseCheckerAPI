@@ -11,17 +11,19 @@ echo "🔹 Cập nhật hệ thống..."
 sudo apt update && sudo apt upgrade -y
 
 echo "🔹 Cài đặt các gói cơ bản..."
-sudo apt install -y wget curl git ufw nano mysql-server dotnet-sdk-7.0
+sudo apt install -y wget curl git ufw nano
 
 # ===============================
 # 2️⃣ CÀI ĐẶT MYSQL SERVER
 # ===============================
-MYSQL_PASSWORD="Bui1610@hung"
+MYSQL_PASSWORD="Bui1610@hung"  # ⚠️ Cần thay bằng mật khẩu bảo mật hơn!
 
-echo "🔹 Cấu hình MySQL..."
+echo "🔹 Cài đặt MySQL Server..."
+sudo apt install mysql-server -y
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
+echo "🔹 Cấu hình MySQL..."
 sudo mysql -u root -e "
 CREATE DATABASE IF NOT EXISTS license_db;
 CREATE USER IF NOT EXISTS 'apiuser'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
