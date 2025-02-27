@@ -25,6 +25,29 @@ public class LicenseController : ControllerBase
 
         return Ok("License hợp lệ!");
     }
+// API để đăng ký license mới
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterLicense([FromBody] License newLicense)
+    {
+        if (string.IsNullOrWhiteSpace(newLicense.LicenseKey) || string.IsNullOrWhiteSpace(newLicense.MachineId))
+        {
+            return BadRequest("LicenseKey và MachineId không được để trống.");
+        }
+
+        var existingLicense = await _context.Licenses.FirstOrDefaultAsync(l =>
+            l.LicenseKey == newLicense.LicenseKey && l.MachineId == newLicense.MachineId);
+
+        if (existingLicense != null)
+        {
+            return Conflict("License đã tồn tại.");
+        }
+
+        newLicense.IsActive = true; // Mặc định license mới là hợp lệ
+        _context.Licenses.Add(newLicense);
+        await _context.SaveChangesAsync();
+
+        return Ok("License đã được đăng ký thành công!");
+    }
     // 🔹 API XÓA LICENSE (Dùng `POST` Thay Vì `DELETE`)
     [HttpPost("delete")]
     public async Task<IActionResult> DeleteLicense([FromBody] LicenseRequest request)
