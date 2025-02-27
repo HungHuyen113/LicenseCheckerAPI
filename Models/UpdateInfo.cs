@@ -8,13 +8,13 @@ public class UpdateInfo
     public int Id { get; set; }
 
     [Required]
-    public string UpdateAvailable { get; set; } = "no";  // ✅ Giá trị mặc định
+    public string UpdateAvailable { get; set; } = "no";  
 
     [Required]
-    public string DownloadLink { get; set; } = "";  // ✅ Tránh lỗi null
+    public string DownloadLink { get; set; } = "";
 
     [Required]
-    public string UpdateMessage { get; set; } = "Không có bản cập nhật nào.";  // ✅ Giá trị mặc định
+    public string UpdateMessage { get; set; } = "Không có bản cập nhật nào."; 
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

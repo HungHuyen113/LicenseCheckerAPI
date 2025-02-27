@@ -14,10 +14,13 @@ sudo rm -rf /var/lib/mysql /etc/mysql
 sudo apt-get autoremove -y
 sudo apt-get autoclean
 
-echo "❌ Gỡ bỏ .NET SDK..."
-sudo apt-get remove --purge -y dotnet-sdk-* || true
-rm -rf $HOME/.dotnet
-rm -rf /usr/share/dotnet
+echo "🔹 Xóa sạch .NET cũ..."
+sudo apt-get remove --purge -y dotnet-sdk-* aspnetcore-* || true
+sudo rm -rf $HOME/.dotnet
+sudo rm -rf /usr/share/dotnet
+sudo rm -rf /etc/apt/sources.list.d/microsoft-prod.list
+sudo apt-get autoremove -y
+sudo apt-get autoclean
 
 echo "❌ Xóa thư mục API cũ..."
 rm -rf /root/LicenseCheckerAPI || true
