@@ -1,11 +1,8 @@
 #!/bin/bash
 
-
 set -e  # Dừng script nếu có lỗi
 
-
 echo "🚀 Bắt đầu cài đặt server License API..."
-
 
 # ===============================
 # 1️⃣ CẬP NHẬT VPS VÀ CÀI ĐẶT GÓI CẦN THIẾT
@@ -13,69 +10,49 @@ echo "🚀 Bắt đầu cài đặt server License API..."
 echo "🔹 Cập nhật hệ thống..."
 sudo apt update && sudo apt upgrade -y
 
-
 echo "🔹 Cài đặt các gói cơ bản..."
 sudo apt install -y wget curl git ufw nano
-
 
 # ===============================
 # 2️⃣ CÀI ĐẶT MYSQL SERVER
 # ===============================
-MYSQL_PASSWORD="Bui1610@hung"  # ⚠️ Thay bằng mật khẩu mạnh hơn!
-
+MYSQL_ROOT_PASSWORD="Bui1610@hung"  
+MYSQL_USER="apiuser"
+MYSQL_PASSWORD="Bui1610@hung"
+MYSQL_DATABASE="license_db"
 
 echo "🔹 Cài đặt MySQL Server..."
 sudo apt install mysql-server -y
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
+echo "🔹 Xóa database cũ nếu tồn tại..."
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "DROP DATABASE IF EXISTS ${MYSQL_DATABASE};"
 
-echo "🔹 Cấu hình MySQL..."
-sudo mysql -u root -e "
-CREATE DATABASE IF NOT EXISTS license_db;
-CREATE USER IF NOT EXISTS 'apiuser'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON license_db.* TO 'apiuser'@'%';
+echo "🔹 Tạo database mới..."
+mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "
+CREATE DATABASE ${MYSQL_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
 FLUSH PRIVILEGES;"
-
 
 # Cho phép MySQL truy cập từ xa
 echo "🔹 Mở MySQL cho truy cập từ xa..."
 sudo sed -i "s/bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
 sudo systemctl restart mysql
 
-
 # ===============================
-# 3️⃣ TẠO BẢNG `UpdateInfo` TRONG MYSQL
-# ===============================
-echo "🔹 Tạo bảng UpdateInfo..."
-sudo mysql -u root -e "
-USE license_db;
-CREATE TABLE IF NOT EXISTS UpdateInfo (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    UpdateAvailable ENUM('yes', 'no') NOT NULL DEFAULT 'no',
-    DownloadLink VARCHAR(255) NOT NULL,
-    UpdateMessage TEXT NOT NULL,
-    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-INSERT INTO UpdateInfo (UpdateAvailable, DownloadLink, UpdateMessage)
-SELECT 'no', '', 'Không có bản cập nhật nào.' 
-WHERE NOT EXISTS (SELECT * FROM UpdateInfo LIMIT 1);
-"
-
-
-# ===============================
-# 4️⃣ MỞ CỔNG TƯỜNG LỬA
+# 3️⃣ MỞ CỔNG TƯỜNG LỬA
 # ===============================
 echo "🔹 Mở cổng cần thiết..."
 sudo ufw allow 22/tcp || echo "Cổng SSH (22) đã mở"
 sudo ufw allow 3306/tcp || echo "Cổng MySQL (3306) đã mở"
 sudo ufw allow 5000/tcp || echo "Cổng API (5000) đã mở"
-echo "y" | sudo ufw enable  # ✅ Tự động xác nhận kích hoạt tường lửa
+echo "y" | sudo ufw enable  # ✅ Thêm "y" để tự động xác nhận
 sudo ufw reload
 
-
 # ===============================
-# 5️⃣ CÀI ĐẶT .NET 7
+# 4️⃣ CÀI ĐẶT .NET 7
 # ===============================
 echo "🔹 Cài đặt .NET 7..."
 wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
@@ -83,13 +60,11 @@ sudo dpkg -i packages-microsoft-prod.deb
 sudo apt update
 sudo apt install -y dotnet-sdk-7.0
 
-
 # ===============================
-# 6️⃣ CLONE CODE TỪ GITHUB
+# 5️⃣ CLONE CODE TỪ GITHUB
 # ===============================
 echo "🔹 Tải lại dự án từ GitHub..."
 cd /root
-
 
 if [ ! -d "/root/LicenseCheckerAPI" ]; then
   git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git || (echo "❌ Lỗi khi clone GitHub" && exit 1)
@@ -98,35 +73,36 @@ else
   git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
 fi
 
-
 cd /root/LicenseCheckerAPI
 
-
 # ===============================
-# 7️⃣ CÀI ĐẶT .NET & ENTITY FRAMEWORK CORE
+# 6️⃣ CÀI ĐẶT .NET & ENTITY FRAMEWORK CORE
 # ===============================
 echo "🔹 Cài đặt các package .NET..."
 dotnet restore
 dotnet tool install --global dotnet-ef --version 7.0.14
 export PATH="/root/.dotnet/tools:$PATH"
 
+# ===============================
+# 7️⃣ XÓA MIGRATION CŨ VÀ TẠO MIGRATION MỚI
+# ===============================
+echo "🔹 Xóa migration cũ..."
+rm -rf Migrations
 
-# ===============================
-# 8️⃣ CHẠY DATABASE MIGRATION
-# ===============================
+echo "🔹 Tạo migration mới..."
+dotnet ef migrations add InitialCreate
+
 echo "🔹 Chạy database migration..."
 dotnet ef database update || (echo "❌ Lỗi khi chạy database migration" && exit 1)
 
-
 # ===============================
-# 9️⃣ CHẠY SERVER API TỰ ĐỘNG
+# 8️⃣ TẠO SERVICE CHẠY API TỰ ĐỘNG
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
 sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
 [Unit]
 Description=License API Service
 After=network.target
-
 
 [Service]
 ExecStart=/usr/bin/dotnet /root/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
@@ -136,16 +112,13 @@ User=root
 Environment=DOTNET_CLI_HOME=/tmp
 Environment=DOTNET_NOLOGO=1
 
-
 [Install]
 WantedBy=multi-user.target
 EOF
-
 
 # Kích hoạt service
 sudo systemctl daemon-reload
 sudo systemctl enable licenseapi.service
 sudo systemctl restart licenseapi.service
-
 
 echo "✅ Server License API đã chạy thành công trên cổng 5000!"
