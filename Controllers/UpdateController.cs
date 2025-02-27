@@ -18,9 +18,17 @@ public class UpdateController : ControllerBase
     public async Task<IActionResult> GetUpdateInfo()
     {
         var updateInfo = await _context.UpdateInfo.OrderByDescending(u => u.CreatedAt).FirstOrDefaultAsync();
+
         if (updateInfo == null)
         {
-            return NotFound(new { message = "Không có thông tin cập nhật nào." });
+            // ✅ Nếu không có dữ liệu, trả về dữ liệu mặc định
+            return Ok(new UpdateInfo
+            {
+                UpdateAvailable = "no",
+                DownloadLink = "",
+                UpdateMessage = "Không có bản cập nhật nào.",
+                CreatedAt = System.DateTime.UtcNow
+            });
         }
 
         return Ok(updateInfo);

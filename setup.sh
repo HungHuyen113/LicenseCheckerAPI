@@ -2,7 +2,32 @@
 
 set -e  # Dừng script nếu có lỗi
 
-echo "🚀 Bắt đầu cài đặt server License API..."
+echo "🚀 Bắt đầu **xóa toàn bộ cài đặt cũ** và cài đặt server License API mới..."
+
+# ===============================
+# 🛑  XÓA CÁC CÀI ĐẶT CŨ
+# ===============================
+echo "❌ Gỡ bỏ MySQL Server..."
+sudo systemctl stop mysql || true
+sudo apt-get remove --purge -y mysql-server mysql-client mysql-common mysql-server-core-* mysql-client-core-* || true
+sudo rm -rf /var/lib/mysql /etc/mysql
+sudo apt-get autoremove -y
+sudo apt-get autoclean
+
+echo "❌ Gỡ bỏ .NET SDK..."
+sudo apt-get remove --purge -y dotnet-sdk-* || true
+rm -rf $HOME/.dotnet
+rm -rf /usr/share/dotnet
+
+echo "❌ Xóa thư mục API cũ..."
+rm -rf /root/LicenseCheckerAPI || true
+
+echo "❌ Xóa dịch vụ API cũ..."
+sudo systemctl stop licenseapi.service || true
+sudo systemctl disable licenseapi.service || true
+sudo rm -f /etc/systemd/system/licenseapi.service
+sudo systemctl daemon-reload
+
 
 # ===============================
 # 1️⃣ CẬP NHẬT VPS VÀ CÀI ĐẶT GÓI CẦN THIẾT
@@ -23,9 +48,14 @@ sudo apt install mysql-server -y
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
+# Kiểm tra MySQL có đang chạy không
+echo "🔹 Kiểm tra trạng thái MySQL..."
+sudo systemctl status mysql --no-pager
+
 echo "🔹 Cấu hình MySQL..."
 sudo mysql -u root -e "
-CREATE DATABASE IF NOT EXISTS license_db;
+DROP DATABASE IF EXISTS license_db;
+CREATE DATABASE license_db;
 CREATE USER IF NOT EXISTS 'apiuser'@'%' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON license_db.* TO 'apiuser'@'%';
 FLUSH PRIVILEGES;"
@@ -44,13 +74,12 @@ USE license_db;
 CREATE TABLE IF NOT EXISTS UpdateInfo (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     UpdateAvailable ENUM('yes', 'no') NOT NULL DEFAULT 'no',
-    DownloadLink VARCHAR(255) NOT NULL,
-    UpdateMessage TEXT NOT NULL,
+    DownloadLink VARCHAR(255) NOT NULL DEFAULT '',
+    UpdateMessage TEXT NOT NULL DEFAULT 'Không có bản cập nhật nào.',
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-INSERT INTO UpdateInfo (UpdateAvailable, DownloadLink, UpdateMessage)
-SELECT 'no', '', 'Không có bản cập nhật nào.' 
-WHERE NOT EXISTS (SELECT * FROM UpdateInfo LIMIT 1);
+INSERT IGNORE INTO UpdateInfo (Id, UpdateAvailable, DownloadLink, UpdateMessage) 
+VALUES (1, 'no', '', 'Không có bản cập nhật nào.');
 "
 
 # ===============================
@@ -77,14 +106,7 @@ sudo apt install -y dotnet-sdk-7.0
 # ===============================
 echo "🔹 Tải lại dự án từ GitHub..."
 cd /root
-
-if [ ! -d "/root/LicenseCheckerAPI" ]; then
-  git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git || (echo "❌ Lỗi khi clone GitHub" && exit 1)
-else
-  cd /root/LicenseCheckerAPI
-  git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
-fi
-
+git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git
 cd /root/LicenseCheckerAPI
 
 # ===============================
@@ -98,31 +120,17 @@ export PATH="/root/.dotnet/tools:$PATH"
 # ===============================
 # 8️⃣ CHẠY DATABASE MIGRATION
 # ===============================
-echo "🔹 Chạy database migration..."
+echo "🔹 Kiểm tra migration..."
+if dotnet ef migrations list | grep -q "No migrations"; then
+    echo "⚠️ Chưa có migration, tạo mới..."
+    dotnet ef migrations add InitialMigration
+fi
 dotnet ef database update || (echo "❌ Lỗi khi chạy database migration" && exit 1)
 
 # ===============================
 # 9️⃣ CHẠY SERVER API TỰ ĐỘNG
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
-sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
-[Unit]
-Description=License API Service
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/dotnet /root/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
-WorkingDirectory=/root/LicenseCheckerAPI
-Restart=always
-User=root
-Environment=DOTNET_CLI_HOME=/tmp
-Environment=DOTNET_NOLOGO=1
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Kích hoạt service
 sudo systemctl daemon-reload
 sudo systemctl enable licenseapi.service
 sudo systemctl restart licenseapi.service
