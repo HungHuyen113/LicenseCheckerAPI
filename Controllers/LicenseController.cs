@@ -48,6 +48,7 @@ public class LicenseController : ControllerBase
         return Ok(new { message = "License deleted successfully!" });
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
     // 🔹 API XÓA LICENSE (Dùng `POST` Thay Vì `DELETE`)
     [HttpPost("delete")]
     public async Task<IActionResult> DeleteLicense([FromBody] LicenseRequest request)
@@ -71,6 +72,8 @@ public class LicenseController : ControllerBase
         return Ok(new { message = "License deleted successfully!" });
     }
 =======
+=======
+>>>>>>> 1dcc1d58c927d370e9136a7d0e67659fdbc5c2e1
     //API để xoá license
     [HttpDelete("delete")]
 public IActionResult DeleteLicense([FromBody] LicenseRequest request)
@@ -94,6 +97,9 @@ public IActionResult DeleteLicense([FromBody] LicenseRequest request)
 
     return Ok(new { message = "License deleted successfully!" });
 }
+<<<<<<< HEAD
+>>>>>>> 1dcc1d58c927d370e9136a7d0e67659fdbc5c2e1
+=======
 >>>>>>> 1dcc1d58c927d370e9136a7d0e67659fdbc5c2e1
 [HttpGet("list")]
 public IActionResult GetLicenses()
