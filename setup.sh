@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS UpdateInfo (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     UpdateAvailable ENUM('yes', 'no') NOT NULL DEFAULT 'no',
     DownloadLink VARCHAR(255) NOT NULL DEFAULT '',
-    UpdateMessage TEXT NOT NULL DEFAULT 'Không có bản cập nhật nào.',
+    UpdateMessage TEXT NOT NULL,  -- ❌ Bỏ DEFAULT để tránh lỗi
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 INSERT IGNORE INTO UpdateInfo (Id, UpdateAvailable, DownloadLink, UpdateMessage) 
