@@ -2,6 +2,35 @@
 
 set -e  # Dừng script nếu có lỗi
 
+echo "🚀 Bắt đầu **xóa toàn bộ cài đặt cũ**"
+
+# ===============================
+# 🛑  XÓA CÁC CÀI ĐẶT CŨ
+# ===============================
+echo "❌ Gỡ bỏ MySQL Server..."
+sudo systemctl stop mysql || true
+sudo apt-get remove --purge -y mysql-server mysql-client mysql-common mysql-server-core-* mysql-client-core-* || true
+sudo rm -rf /var/lib/mysql /etc/mysql
+sudo apt-get autoremove -y
+sudo apt-get autoclean
+
+echo "❌ Gỡ bỏ .NET SDK..."
+sudo apt-get remove --purge -y dotnet-sdk-* aspnetcore-* || true
+sudo rm -rf /root/.dotnet
+sudo rm -rf /usr/share/dotnet
+sudo rm -rf /etc/apt/sources.list.d/microsoft-prod.list
+sudo apt-get autoremove -y
+sudo apt-get autoclean
+
+echo "❌ Xóa thư mục API cũ..."
+rm -rf /root/LicenseCheckerAPI || true
+
+echo "❌ Xóa dịch vụ API cũ..."
+sudo systemctl stop licenseapi.service || true
+sudo systemctl disable licenseapi.service || true
+sudo rm -f /etc/systemd/system/licenseapi.service
+sudo systemctl daemon-reload
+
 echo "🚀 Bắt đầu cài đặt server License API..."
 
 # ===============================
