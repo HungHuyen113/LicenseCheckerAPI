@@ -48,4 +48,33 @@ public class LicenseController : ControllerBase
 
         return Ok("License đã được đăng ký thành công!");
     }
+    // 🔹 API XÓA LICENSE (Dùng `POST` Thay Vì `DELETE`)
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteLicense([FromBody] LicenseRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.LicenseKey) || string.IsNullOrWhiteSpace(request.MachineId))
+        {
+            return BadRequest(new { message = "Invalid request format." });
+        }
+
+        var license = await _context.Licenses.FirstOrDefaultAsync(l =>
+            l.LicenseKey == request.LicenseKey && l.MachineId == request.MachineId);
+
+        if (license == null)
+        {
+            return NotFound(new { message = "License not found." });
+        }
+
+        _context.Licenses.Remove(license);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "License deleted successfully!" });
+    }
+[HttpGet("list")]
+public IActionResult GetLicenses()
+{
+    var licenses = _context.Licenses.ToList();
+    return Ok(licenses);
+}
+
 }
