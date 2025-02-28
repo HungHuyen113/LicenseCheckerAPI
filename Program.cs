@@ -30,5 +30,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-app.Urls.Add("http://0.0.0.0:5000");
-app.Run();
+app.MapGet("/", () => Results.Ok("API is running..."));
+app.Run("http://0.0.0.0:5000");
