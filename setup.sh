@@ -2,6 +2,17 @@
 
 set -e  # Dừng script nếu có lỗi
 
+# ===============================
+# 🔹 CẤU HÌNH THÔNG TIN VPS & MYSQL
+# ===============================
+USERNAME="root"
+PROJECT_DIR="/root/LicenseCheckerAPI"
+SERVICE_NAME="licenseapi.service"
+MYSQL_ROOT_PASSWORD="Bui1610@hung"
+MYSQL_USER="apiuser"
+MYSQL_PASSWORD="Bui1610@hung"
+MYSQL_DATABASE="license_db"
+
 echo "🚀 Bắt đầu **xóa toàn bộ cài đặt cũ**"
 
 # ===============================
@@ -23,12 +34,12 @@ sudo apt-get autoremove -y
 sudo apt-get autoclean
 
 echo "❌ Xóa thư mục API cũ..."
-rm -rf /root/LicenseCheckerAPI || true
+rm -rf $PROJECT_DIR || true
 
 echo "❌ Xóa dịch vụ API cũ..."
-sudo systemctl stop licenseapi.service || true
-sudo systemctl disable licenseapi.service || true
-sudo rm -f /etc/systemd/system/licenseapi.service
+sudo systemctl stop $SERVICE_NAME || true
+sudo systemctl disable $SERVICE_NAME || true
+sudo rm -f /etc/systemd/system/$SERVICE_NAME
 sudo systemctl daemon-reload
 
 echo "🚀 Bắt đầu cài đặt server License API..."
@@ -40,20 +51,21 @@ echo "🔹 Cập nhật hệ thống..."
 sudo apt update && sudo apt upgrade -y
 
 echo "🔹 Cài đặt các gói cơ bản..."
-sudo apt install -y wget curl git ufw nano
+sudo apt install -y wget curl git ufw nano || (echo "❌ Lỗi khi cài đặt gói cơ bản" && exit 1)
 
 # ===============================
 # 2️⃣ CÀI ĐẶT MYSQL SERVER
 # ===============================
-MYSQL_ROOT_PASSWORD="Bui1610@hung"  
-MYSQL_USER="apiuser"
-MYSQL_PASSWORD="Bui1610@hung"
-MYSQL_DATABASE="license_db"
-
 echo "🔹 Cài đặt MySQL Server..."
-sudo apt install mysql-server -y
+sudo apt install mysql-server -y || (echo "❌ Lỗi khi cài đặt MySQL" && exit 1)
 sudo systemctl start mysql
 sudo systemctl enable mysql
+
+# Kiểm tra MySQL có chạy không
+if ! systemctl is-active --quiet mysql; then
+    echo "❌ MySQL chưa khởi động. Đang khởi động lại..."
+    sudo systemctl start mysql
+fi
 
 echo "🔹 Xóa database cũ nếu tồn tại..."
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "DROP DATABASE IF EXISTS ${MYSQL_DATABASE};"
@@ -74,10 +86,12 @@ sudo systemctl restart mysql
 # 3️⃣ MỞ CỔNG TƯỜNG LỬA
 # ===============================
 echo "🔹 Mở cổng cần thiết..."
-sudo ufw allow 22/tcp || echo "Cổng SSH (22) đã mở"
-sudo ufw allow 3306/tcp || echo "Cổng MySQL (3306) đã mở"
-sudo ufw allow 5000/tcp || echo "Cổng API (5000) đã mở"
-echo "y" | sudo ufw enable  # ✅ Thêm "y" để tự động xác nhận
+for port in 22 3306 5000; do
+    if ! sudo ufw status | grep -q "$port/tcp"; then
+        sudo ufw allow $port/tcp
+    fi
+done
+echo "y" | sudo ufw enable
 sudo ufw reload
 
 # ===============================
@@ -87,57 +101,42 @@ echo "🔹 Cài đặt .NET 7..."
 wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 sudo dpkg -i packages-microsoft-prod.deb
 sudo apt update
-sudo apt install -y dotnet-sdk-7.0
+sudo apt install -y dotnet-sdk-7.0 || (echo "❌ Lỗi khi cài đặt .NET SDK" && exit 1)
 
 # ===============================
 # 5️⃣ CLONE CODE TỪ GITHUB
 # ===============================
 echo "🔹 Tải lại dự án từ GitHub..."
-cd /root
-
-if [ ! -d "/root/LicenseCheckerAPI" ]; then
-  git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git || (echo "❌ Lỗi khi clone GitHub" && exit 1)
+if [ -d "$PROJECT_DIR" ]; then
+    echo "🔹 Dự án đã tồn tại. Đang cập nhật..."
+    cd $PROJECT_DIR
+    git reset --hard
+    git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
 else
-  cd /root/LicenseCheckerAPI
-  git pull || (echo "❌ Lỗi khi pull từ GitHub" && exit 1)
+    git clone https://github.com/HungHuyen113/LicenseCheckerAPI.git $PROJECT_DIR
 fi
-
-cd /root/LicenseCheckerAPI
-
-# ===============================
-# 6️⃣ CÀI ĐẶT .NET & ENTITY FRAMEWORK CORE
-# ===============================
-echo "🔹 Cài đặt các package .NET..."
-dotnet restore
-dotnet tool install --global dotnet-ef --version 7.0.14
-export PATH="/root/.dotnet/tools:$PATH"
+cd $PROJECT_DIR
 
 # ===============================
-# 7️⃣ XÓA MIGRATION CŨ VÀ TẠO MIGRATION MỚI
+# 6️⃣ XÂY DỰNG & CHẠY API
 # ===============================
-echo "🔹 Xóa migration cũ..."
-rm -rf Migrations
-
-echo "🔹 Tạo migration mới..."
-dotnet ef migrations add InitialCreate
-
-echo "🔹 Chạy database migration..."
-dotnet ef database update || (echo "❌ Lỗi khi chạy database migration" && exit 1)
+echo "🔹 Xây dựng API..."
+dotnet build --configuration Release
 
 # ===============================
-# 8️⃣ TẠO SERVICE CHẠY API TỰ ĐỘNG
+# 7️⃣ TẠO SERVICE CHẠY API
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
-sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/$SERVICE_NAME > /dev/null <<EOF
 [Unit]
 Description=License API Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/dotnet /root/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
-WorkingDirectory=/root/LicenseCheckerAPI
+ExecStart=/usr/bin/dotnet $PROJECT_DIR/bin/Release/net7.0/LicenseCheckerAPI.dll
+WorkingDirectory=$PROJECT_DIR
 Restart=always
-User=root
+User=$USERNAME
 Environment=DOTNET_CLI_HOME=/tmp
 Environment=DOTNET_NOLOGO=1
 
@@ -147,7 +146,7 @@ EOF
 
 # Kích hoạt service
 sudo systemctl daemon-reload
-sudo systemctl enable licenseapi.service
-sudo systemctl restart licenseapi.service
+sudo systemctl enable $SERVICE_NAME
+sudo systemctl restart $SERVICE_NAME
 
 echo "✅ Server License API đã chạy thành công trên cổng 5000!"
