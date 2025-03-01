@@ -148,24 +148,6 @@ dotnet ef database update
 # 8️⃣ TẠO SERVICE CHẠY API TỰ ĐỘNG
 # ===============================
 echo "🔹 Tạo service để server tự động chạy khi VPS khởi động..."
-sudo tee /etc/systemd/system/licenseapi.service > /dev/null <<EOF
-[Unit]
-Description=License API Service
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/dotnet /home/$USERNAME/LicenseCheckerAPI/bin/Debug/net7.0/LicenseCheckerAPI.dll
-WorkingDirectory=/home/$USERNAME/LicenseCheckerAPI
-Restart=always
-User=$USERNAME
-Environment=DOTNET_CLI_HOME=/tmp
-Environment=DOTNET_NOLOGO=1
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Kích hoạt service
 sudo systemctl daemon-reload
 sudo systemctl enable licenseapi.service
 sudo systemctl restart licenseapi.service
